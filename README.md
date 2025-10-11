@@ -1,94 +1,128 @@
-# 📚 Anki-lingua
+# 🌐 anki-lingua
+> **AI-powered multilingual flashcard generator for Anki**
 
-Genereer automatisch **Anki-flashcards** vanuit een woordenlijst. Het script gebruikt **OpenAI** (en optioneel Google) voor:
-- vertaling van het doelwoord,
-- één voorbeeldzin + vertaling,
-- audio voor het woord én (optioneel) de voorbeeldzin,
-- een **langzame** audio-variant voor alleen de voorbeeldzin (geen extra API-kosten).
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![OpenAI API](https://img.shields.io/badge/API-OpenAI-orange)](https://platform.openai.com/)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-required-lightgrey)](https://ffmpeg.org/)
 
-## 🚀 Features
-- Meertalig (brontaal/doeltaal in `config.json`)
-- LLM output in **stabiel JSON** (robuste parsing)
-- Resume + Cache voor snelheid/kosten
-- Retry/backoff bij netwerk/rate-limit problemen
-- **OOV**: extra woorden uit voorbeeldzinnen (met optionele vertalingen) op de achterkant van de kaart
-- **Slow Audio** voor voorbeeldzin via `ffmpeg` (lokaal tijdrekken, geen extra tokens)
-- Output: `.tsv` + `.apkg` (Anki Desktop & AnkiDroid)
+---
 
-## 🛠 Installatie
-### Vereisten
-- Python 3.11+
-- `pip`
-- OpenAI API key (betaald account)
-- (Optioneel) Google Cloud service-account JSON voor Google TTS/Translate
-- `ffmpeg` (voor slow-audio)
-  ```bash
-  sudo apt-get update && sudo apt-get install -y ffmpeg
-  ```
+### 🧠 What is anki-lingua?
 
-### Packages
+**anki-lingua** turns your plain word lists into fully featured **Anki flashcards** with:
+- ✅ **Automatic translation** between any supported languages  
+- 🗣️ **AI-generated example sentences**
+- 🔊 **Text-to-speech audio** for words and example sentences  
+- 🕓 **Configurable playback speed** for the example audio  
+- 💾 **Caching & retrying**, so you never lose progress  
+- 🧩 **Optional Google backend** for low-cost TTS/Translate  
+- 📘 **Anki-ready output** (`.tsv` + `.apkg`)
+
+Whether you study **Indonesian, Japanese, Spanish, or Balinese dialects**,  
+anki-lingua helps you build consistent and natural flashcards with minimal effort.
+
+---
+
+## 🚀 Quick Start
+
+### 1️⃣ Install dependencies
+
 ```bash
+git clone https://github.com/YOURNAME/anki-lingua.git
+cd anki-lingua
 python3 -m pip install -r requirements.txt
-```
+Ensure ffmpeg is installed:
 
-### Config
-Kopieer `config.example.json` → `config.json` en vul je sleutels/voorkeuren in.
+bash
+Code kopiëren
+sudo apt-get install -y ffmpeg
+2️⃣ Configure your API key
+Copy the example config and edit it:
 
-## ▶️ Gebruik
-### Woordenlijst
-Eén woord per regel, bijv. `woorden.txt`:
-```
+bash
+Code kopiëren
+cp config.example.json config.json
+nano config.json
+Set your OpenAI API key or Google credentials.
+
+Example snippet:
+
+json
+Code kopiëren
+{
+  "BACKEND": "openai",
+  "OPENAI_API_KEY": "sk-...",
+  "TEXT_MODEL_OPENAI": "gpt-5-mini",
+  "TTS_MODEL_OPENAI": "gpt-4o-mini-tts",
+  "TTS_VOICE_OPENAI": "alloy",
+  "SOURCE_LANG": "Indonesisch",
+  "TARGET_LANG": "Nederlands",
+  "EXAMPLE_AUDIO_RATE": 0.85,
+  "ENABLE_CACHE": true
+}
+3️⃣ Run the generator
+Provide a simple text file (one word per line):
+
+nginx
+Code kopiëren
+air
+makan
 maaf
 mana
-air
-```
+Run the tool:
 
-### Run
-```bash
+bash
+Code kopiëren
 python3 -m anki_builder.src.runner woorden.txt
-```
-Resultaat in `out/`:
-- `anki_notes.tsv`
-- `anki_deck.apkg`
-- `media/` (audio)
-- `extra_words.txt` (OOV uit voorbeeldzinnen)
+After processing, you’ll find:
 
-## 📦 Import in Anki
-- **Anki Desktop**: *Bestand → Importeren* → kies `anki_deck.apkg` of `anki_notes.tsv`
-- **AnkiDroid**: kopieer `.apkg` naar je toestel → open in AnkiDroid
+pgsql
+Code kopiëren
+out/
+ ├── media/
+ ├── anki_notes.tsv
+ ├── anki_notes.apkg
+ ├── state.json
+ └── extra_words.txt
+Import the .apkg file directly into Anki Desktop or sync with AnkiDroid.
 
-## ⚙️ Belangrijke opties in `config.json`
-- `"REGENERATE_AUDIO_ALWAYS"`: forceer audio opnieuw genereren (voorkomt mismatch met oude bestanden)
-- `"GENERATE_SLOW_AUDIO"` / `"SLOW_AUDIO_RATE"` / `"INCLUDE_SLOW_ON_CARD"`: slow-audio voor **alleen** de voorbeeldzin
-- `"SHOW_NEW_WORDS_ON_BACK"`: zet OOV-woorden (met evt. vertalingen) op de achterkant
-- `"ENABLE_CACHE"` / `"RESUME_ENABLED"`: snel/zuinig werken zonder dubbele LLM-calls
+⚙️ Configuration Overview
+Key Description Default
+BACKEND openai or google  "openai"
+OPENAI_API_KEY  Your API key  
+TEXT_MODEL_OPENAI GPT model for text generation "gpt-5-mini"
+TTS_MODEL_OPENAI  Model for speech  "gpt-4o-mini-tts"
+TTS_VOICE_OPENAI  Voice style "alloy"
+SOURCE_LANG Source language label "Indonesisch"
+TARGET_LANG Target language label "Nederlands"
+EXAMPLE_AUDIO_RATE  Playback speed for example sentence (0.5–2.0) 1.0
+ENABLE_CACHE  Use cached API responses  true
+SHOW_NEW_WORDS_ON_BACK  Include new unknown words on back true
+OOV_TRANSLATE Translate new words in example sentences  true
+CREATE_APKG Build Anki package automatically  true
 
-## 🐢 Slow Audio (voorbeeldzin)
-- Geen extra API-calls; `ffmpeg` maakt lokaal een tragere kopie (bijv. 0.75×).
-- Op de kaart verschijnt (optioneel): `Langzaam: [sound:<..._ex_slow.mp3>]`
+💡 Tips & Tricks
+🗂 Duplicate words are processed only once — avoids redundant API calls.
 
-## 🔧 Reset / Clean
-Alles opnieuw genereren? Verwijder output, media, cache en state:
-```bash
-rm -f out/anki_notes.tsv out/anki_deck.apkg out/extra_words.txt out/state.json
-rm -rf out/media cache
-```
+🎧 Audio speed is handled locally via ffmpeg, not via extra API calls.
 
-## 📁 Structuur
-```
-anki_builder/
-  └─ src/
-     ├─ runner.py
-     ├─ prompts.py
-     ├─ config_loader.py
-     ├─ io_utils.py
-     ├─ packaging.py
-     ├─ cache_utils.py
-     ├─ backends/
-     │  ├─ openai_backend.py
-     │  └─ google_backend.py
-     └─ services/           # (gereserveerd voor toekomstige refactor)
-``
+🔄 Cache & resume let you stop and restart generation at any time.
 
-## ⚠️ Veilig met geheimen
-- Commit **nooit** `config.json` met echte keys. Gebruik `config.example.json` in git, en zet `config.json` in `.gitignore`.
+🧾 extra_words.txt lists new tokens found in example sentences — perfect for expanding your vocabulary list.
+
+🌍 Works great for any language, but you can note regional variants manually (e.g., Balinese, Malay).
+
+🧰 Troubleshooting
+Issue Cause / Fix
+ffmpeg not found  Install with sudo apt-get install ffmpeg
+BadRequestError temperature Some TTS models don’t support temperature — update config.
+Example audio mismatched  Sometimes API latency causes mix-ups; rerun with cache disabled.
+Duplicates skipped  Normal behaviour; each unique word only once.
+
+📜 License
+This project is licensed under the MIT License.
+
+❤️ Credits
+Created with love (and a lot of tenacity 😄) to make language learning effortless.
+Uses OpenAI GPT models, FFmpeg, and Anki.
