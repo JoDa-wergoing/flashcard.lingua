@@ -1,4 +1,4 @@
-# 📚 Anki Flashcard Builder
+# 📚 Anki-lingua
 
 Genereer automatisch **Anki-flashcards** vanuit een woordenlijst. Het script gebruikt **OpenAI** (en optioneel Google) voor:
 - vertaling van het doelwoord,
