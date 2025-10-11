@@ -29,7 +29,7 @@ anki-lingua helps you build consistent and natural flashcards with minimal effor
 ### 1️⃣ Install dependencies
 
 ```bash
-git clone https://github.com/YOURNAME/anki-lingua.git
+git clone https://github.com/JoDa-wergoing/anki-lingua.git
 cd anki-lingua
 python3 -m pip install -r requirements.txt
 Ensure ffmpeg is installed:
