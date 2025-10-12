@@ -19,7 +19,7 @@
 - 🧩 **Optional Google backend** for low-cost TTS/Translate  
 - 📘 **Anki-ready output** (`.tsv` + `.apkg`)
 
-Whether you study **Indonesian, Japanese, Spanish, or Balinese dialects**,  
+Whether you study **Japanese, Spanish, or specific dialects or any other language**,  
 anki-lingua helps you build consistent and natural flashcards with minimal effort.
 
 ---
