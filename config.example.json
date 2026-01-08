@@ -1,6 +1,6 @@
 {
-  "OPENAI_API_KEY": "PLAATS_HIER_JE_OPENAI_API_KEY",
-  "GOOGLE_APPLICATION_CREDENTIALS": "/pad/naar/service-account.json",
+  "OPENAI_API_KEY": "YOUR_OPENAI_API_KEY",
+  "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/service-account.json",
   "TEXT_MODEL_OPENAI": "gpt-5-mini",
   "TTS_MODEL_OPENAI": "gpt-4o-mini-tts",
   "TTS_VOICE_OPENAI": "alloy",

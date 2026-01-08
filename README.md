@@ -29,6 +29,42 @@ The result is a ready-to-study flashcard deck that emphasizes **meaning, usage, 
 
 ---
 
+## ▶️ Run the generator
+
+From the project root (the folder that contains `config.json`):
+
+```bash
+python3 -m flashcard_lingua.runner words.txt
+
+Example input file
+
+Create a text file with one word (in the language you want to learn per line), for example words.txt:
+
+makan
+air
+maaf
+mana
+
+Optional CLI flags
+
+You can control how “usage notes” are generated:
+
+python3 -m flashcard_lingua.runner words.txt --usage-notes auto
+python3 -m flashcard_lingua.runner words.txt --usage-notes always
+python3 -m flashcard_lingua.runner words.txt --usage-notes never
+
+
+Most settings are configured in config.json (models, languages, cache/resume, audio options).
+Where the output goes
+
+After running, the output is written to the folder configured in config.json (default: out/):
+out/anki_notes.tsv
+out/anki_notes.apkg (if enabled)
+out/media/ (audio files)
+out/extra_words.txt (new words found in example sentences)
+
+---
+
 ## ✅ Anki Compatibility
 
 flashcards.lingua produces output that is fully compatible with:
