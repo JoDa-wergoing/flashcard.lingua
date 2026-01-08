@@ -1,0 +1,90 @@
+name: Build releases (Windows + Linux)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            exe_name: anki-lingua
+            out_archive: anki-lingua-windows.zip
+          - os: ubuntu-latest
+            exe_name: anki-lingua
+            out_archive: anki-lingua-linux.tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pyinstaller
+
+      # ENTRYPOINT: cli.py (wrapper) — pas aan als je hem anders noemt
+      - name: Build binary
+        shell: bash
+        run: |
+          pyinstaller --onefile --name "${{ matrix.exe_name }}" cli.py
+
+      - name: Assemble release folder
+        shell: bash
+        run: |
+          mkdir -p release
+
+          # PyInstaller output verschilt per OS niet, maar exe extensie wel
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "dist/${{ matrix.exe_name }}.exe" "release/${{ matrix.exe_name }}.exe"
+          else
+            cp "dist/${{ matrix.exe_name }}" "release/${{ matrix.exe_name }}"
+            chmod +x "release/${{ matrix.exe_name }}"
+          fi
+
+          # Docs
+          [ -f README.md ] && cp README.md release/README.md || true
+          [ -f LICENSE ] && cp LICENSE release/LICENSE || true
+
+          # Benodigde voorbeeldbestanden (pas aan als je later meer mappen hebt)
+          [ -f config.example.json ] && cp config.example.json release/config.example.json || true
+          [ -f woorden.example.txt ] && cp woorden.example.txt release/woorden.example.txt || true
+
+      - name: Create archive (Windows ZIP / Linux tar.gz)
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            # op windows runner is ook tar beschikbaar, maar zip is het meest standaard
+            cd release
+            7z a "../${{ matrix.out_archive }}" ./*
+            cd ..
+          else
+            tar -czf "${{ matrix.out_archive }}" -C release .
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out_archive }}
+          path: ${{ matrix.out_archive }}
+
+      - name: Upload to GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.out_archive }}
