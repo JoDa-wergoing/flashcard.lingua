@@ -1,5 +1,13 @@
 /config.json
 /woorden.txt
 cache/
+/.gitignore
+
+openapikey.txt
+config.json
+
+words.txt
+new_words.txt
 out/
+cache/
 __pycache__/
