@@ -1,128 +1,97 @@
-# 🌐 anki-lingua
-> **AI-powered multilingual flashcard generator for Anki**
+# 🌐 flashcards.lingua
+**AI-powered multilingual flashcard generator — Anki compatible**
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![OpenAI API](https://img.shields.io/badge/API-OpenAI-orange)](https://platform.openai.com/)
-[![FFmpeg](https://img.shields.io/badge/FFmpeg-required-lightgrey)](https://ffmpeg.org/)
+flashcards.lingua is a command-line tool that transforms simple word lists into
+**high-quality, Anki-compatible flashcard decks** with translations, example sentences,
+and audio.
+It is designed for serious language learners who want **structure, context, and sound**
+without manual card creation.
 
----
-
-### 🧠 What is anki-lingua?
-
-**anki-lingua** turns your plain word lists into fully featured **Anki flashcards** with:
-- ✅ **Automatic translation** between any supported languages  
-- 🗣️ **AI-generated example sentences**
-- 🔊 **Text-to-speech audio** for words and example sentences  
-- 🕓 **Configurable playback speed** for the example audio  
-- 💾 **Caching & retrying**, so you never lose progress  
-- 🧩 **Optional Google backend** for low-cost TTS/Translate  
-- 📘 **Anki-ready output** (`.tsv` + `.apkg`)
-
-Whether you study **Japanese, Spanish, or specific dialects or any other language**,  
-anki-lingua helps you build consistent and natural flashcards with minimal effort.
+The generated decks integrate seamlessly with **Anki** and can be used together with
+**flashcard.audio** for audio-focused practice.
 
 ---
 
-## 🚀 Quick Start
+## 🎯 What does flashcards.lingua do?
 
-### 1️⃣ Install dependencies
+Given a plain text word list (one word per line), flashcards.lingua automatically:
 
-```bash
-git clone https://github.com/JoDa-wergoing/anki-lingua.git
-cd anki-lingua
-python3 -m pip install -r requirements.txt
-Ensure ffmpeg is installed:
+- Translates each word into a target language
+- Generates a natural example sentence
+- Translates the example sentence
+- Generates audio for:
+  - the word
+  - the example sentence
+- Optionally detects and lists **new words** appearing in example sentences
+- Exports everything as an **Anki-compatible deck**
 
-bash
-Code kopiëren
-sudo apt-get install -y ffmpeg
-2️⃣ Configure your API key
-Copy the example config and edit it:
+The result is a ready-to-study flashcard deck that emphasizes **meaning, usage, and pronunciation**.
 
-bash
-Code kopiëren
-cp config.example.json config.json
-nano config.json
-Set your OpenAI API key or Google credentials.
+---
 
-Example snippet:
+## ✅ Anki Compatibility
 
-json
-Code kopiëren
-{
-  "BACKEND": "openai",
-  "OPENAI_API_KEY": "sk-...",
-  "TEXT_MODEL_OPENAI": "gpt-5-mini",
-  "TTS_MODEL_OPENAI": "gpt-4o-mini-tts",
-  "TTS_VOICE_OPENAI": "alloy",
-  "SOURCE_LANG": "Indonesisch",
-  "TARGET_LANG": "Nederlands",
-  "EXAMPLE_AUDIO_RATE": 0.85,
-  "ENABLE_CACHE": true
-}
-3️⃣ Run the generator
-Provide a simple text file (one word per line):
+flashcards.lingua produces output that is fully compatible with:
 
-nginx
-Code kopiëren
-air
-makan
-maaf
-mana
-Run the tool:
+- **Anki Desktop**
+- **AnkiDroid**
+- **AnkiMobile**
 
-bash
-Code kopiëren
-python3 -m anki_builder.src.runner woorden.txt
-After processing, you’ll find:
+### Output formats
+- `.tsv` — for manual import or inspection
+- `.apkg` — ready-to-import Anki deck (recommended)
 
-pgsql
-Code kopiëren
-out/
- ├── media/
- ├── anki_notes.tsv
- ├── anki_notes.apkg
- ├── state.json
- └── extra_words.txt
-Import the .apkg file directly into Anki Desktop or sync with AnkiDroid.
+### Anki note fields
 
-⚙️ Configuration Overview
-Key Description Default
-BACKEND openai or google  "openai"
-OPENAI_API_KEY  Your API key  
-TEXT_MODEL_OPENAI GPT model for text generation "gpt-5-mini"
-TTS_MODEL_OPENAI  Model for speech  "gpt-4o-mini-tts"
-TTS_VOICE_OPENAI  Voice style "alloy"
-SOURCE_LANG Source language label "Indonesisch"
-TARGET_LANG Target language label "Nederlands"
-EXAMPLE_AUDIO_RATE  Playback speed for example sentence (0.5–2.0) 1.0
-ENABLE_CACHE  Use cached API responses  true
-SHOW_NEW_WORDS_ON_BACK  Include new unknown words on back true
-OOV_TRANSLATE Translate new words in example sentences  true
-CREATE_APKG Build Anki package automatically  true
+1. **Front**
+2. **Back**
+3. **Example Source**
+4. **Example Target**
+5. **Note**
+6. **New Words**
 
-💡 Tips & Tricks
-🗂 Duplicate words are processed only once — avoids redundant API calls.
+---
 
-🎧 Audio speed is handled locally via ffmpeg, not via extra API calls.
+## 🎧 Using flashcards.lingua with flashcard.audio
 
-🔄 Cache & resume let you stop and restart generation at any time.
+**flashcards.lingua** and **flashcard.audio** are complementary tools:
 
-🧾 extra_words.txt lists new tokens found in example sentences — perfect for expanding your vocabulary list.
+- **flashcards.lingua**
+  - Generates structured flashcard decks
+  - Focuses on vocabulary, context, and Anki integration
 
-🌍 Works great for any language, but you can note regional variants manually (e.g., Balinese, Malay).
+- **flashcard.audio**
+  - Focuses on audio-first learning and repetition
 
-🧰 Troubleshooting
-Issue Cause / Fix
-ffmpeg not found  Install with sudo apt-get install ffmpeg
-BadRequestError temperature Some TTS models don’t support temperature — update config.
-Example audio mismatched  Sometimes API latency causes mix-ups; rerun with cache disabled.
-Duplicates skipped  Normal behaviour; each unique word only once.
+---
 
-📜 License
-This project is licensed under the MIT License.
+## 🧠 Key Features
 
-❤️ Credits
-Created with love (and a lot of tenacity 😄) to make language learning effortless.
-Uses OpenAI GPT models, FFmpeg, and Anki.
+- 🌍 Multilingual (any source → target language)
+- 🧠 AI-generated translations and examples
+- 🔊 Built-in audio generation
+- ⚡ Example sentence audio speed control
+- 💾 Caching to reduce API usage and cost
+- 🔄 Resume support if generation is interrupted
+- 🧩 Automatic detection of new vocabulary
+- 📦 Clean, Anki-ready output
+
+---
+
+## 📜 License
+
+MIT License
+
+---
+
+## ⚖️ Legal Notice
+
+flashcards.lingua is an independent, open-source project.
+
+It is **not affiliated with, endorsed by, or sponsored by Anki** or any
+third-party service mentioned in this documentation.
+Anki is a registered trademark of its respective owner.
+
+flashcards.lingua uses third-party APIs for content generation.
+Users are responsible for complying with the terms of service of
+OpenAI, Google, Anki, and any other services they choose to use.
