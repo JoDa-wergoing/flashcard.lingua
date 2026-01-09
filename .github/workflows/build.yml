@@ -18,7 +18,7 @@ jobs:
           - os: windows-latest
             exe_name: anki-lingua
             out_archive: anki-lingua-windows.zip
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             exe_name: anki-lingua
             out_archive: anki-lingua-linux.tar.gz
 
