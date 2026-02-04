@@ -8,7 +8,7 @@ It is designed for serious language learners who want **structure, context, and 
 without manual card creation.
 
 The generated decks integrate seamlessly with **Anki** and can be used together with
-**flashcard.audio** for audio-focused practice.
+**flashcard.audio** for audio-focused practice (https://github.com/JoDa-wergoing/flashcard.audio).
 
 ---
 
