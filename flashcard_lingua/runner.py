@@ -1,4 +1,4 @@
-# src/runner.py
+# flashcard_lingua/runner.py
 import sys
 import time
 import csv
@@ -11,25 +11,40 @@ from tqdm import tqdm
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, before_sleep_log
 
 from .config_loader import load_config
-from .io_utils import read_wordlist, safe_filename, tokenize_words
+from .io_utils import (
+    read_wordlist,
+    tokenize_words,
+    word_audio_filename,
+    example_audio_filename,
+)
 from .packaging import build_apkg
 from .cache_utils import make_cache_key, cache_read, cache_write, load_state, save_state
 
-logger = logging.getLogger("anki_builder")
+logger = logging.getLogger("flashcard_lingua")
+
 
 class RetryableError(Exception):
     pass
 
+
 def is_retryable_exception(e: Exception) -> bool:
     s = str(e).lower()
-    # Rate limits, server errors, timeouts, TLS/verbinding issues
     return (
-        "429" in s or "rate limit" in s or
-        "503" in s or "502" in s or "504" in s or "service unavailable" in s or
-        "timeout" in s or "timed out" in s or
-        "read error" in s or "connection reset" in s or "ssl" in s or
-        "temporary failure in name resolution" in s or "failed to establish a new connection" in s
+        "429" in s
+        or "rate limit" in s
+        or "503" in s
+        or "502" in s
+        or "504" in s
+        or "service unavailable" in s
+        or "timeout" in s
+        or "timed out" in s
+        or "read error" in s
+        or "connection reset" in s
+        or "ssl" in s
+        or "temporary failure in name resolution" in s
+        or "failed to establish a new connection" in s
     )
+
 
 def make_retry_decorator(max_attempts: int):
     return retry(
@@ -39,35 +54,48 @@ def make_retry_decorator(max_attempts: int):
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
 
+
 def _ffmpeg_available() -> bool:
     try:
-        subprocess.run(["ffmpeg", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(
+            ["ffmpeg", "-version"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
         return True
     except Exception:
         return False
 
+
 def adjust_audio_rate(in_path: Path, out_path: Path, rate: float) -> None:
-    """
-    Pas afspeelsnelheid aan met pitch-preserving time-stretch via ffmpeg 'atempo'.
-    Geldige rate: 0.5..2.0 (1.0 = ongewijzigd)
-    """
     out_path.parent.mkdir(parents=True, exist_ok=True)
+
     if not _ffmpeg_available():
         raise RuntimeError("ffmpeg niet gevonden. Installeer met: sudo apt-get install -y ffmpeg")
+
     cmd = [
-        "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-        "-i", str(in_path),
-        "-filter:a", f"atempo={rate}",
-        str(out_path)
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        str(in_path),
+        "-filter:a",
+        f"atempo={rate}",
+        str(out_path),
     ]
     subprocess.run(cmd, check=True)
 
+
 def main():
     import argparse
+
     ap = argparse.ArgumentParser(
-        description="Flashcards bouwer (OpenAI/Google) + cache + resume + retry + OOV + voorbeeld-audio (met configureerbare snelheid)."
+        description="Flashcard.Lingua generator (Anki-compatible deck builder)."
     )
-    ap.add_argument("input", help="Woordenlijst .txt of .csv")
+    ap.add_argument("input", help="Word list file (.txt or .csv)")
     ap.add_argument("--usage-notes", choices=["auto", "always", "never"])
     args = ap.parse_args()
 
@@ -75,9 +103,12 @@ def main():
 
     # Logging
     log_level = getattr(logging, cfg.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
-    third_party_level = getattr(logging, cfg.get("THIRD_PARTY_LOG_LEVEL", "WARNING").upper(), logging.WARNING)
+    third_party_level = getattr(
+        logging, cfg.get("THIRD_PARTY_LOG_LEVEL", "WARNING").upper(), logging.WARNING
+    )
     logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s: %(message)s")
     logger.setLevel(log_level)
+
     for _name in ("httpx", "httpcore", "openai", "urllib3"):
         _lg = logging.getLogger(_name)
         _lg.setLevel(third_party_level)
@@ -94,22 +125,26 @@ def main():
     elif backend_name == "google":
         from .backends.google_backend import GoogleBackend as Backend
     else:
-        raise ValueError("BACKEND moet 'openai' of 'google' zijn.")
+        raise ValueError("BACKEND must be 'openai' or 'google'.")
+
     backend = Backend(cfg)
 
-    # Invoer
+    # Input
     words: List[str] = read_wordlist(Path(args.input))
     if not words:
-        print("Geen woorden in invoer.")
+        print("No words found in input.")
         sys.exit(1)
 
-    # Vocab & OOV
     vocab = {w.strip().lower() for w in words}
     extra_words_global = set()
 
-    # Output paden
-    out_dir = Path(cfg.get("OUTPUT_DIR", "out")); out_dir.mkdir(exist_ok=True)
-    media_dir = out_dir / cfg.get("OUTPUT_MEDIA_DIR", "media"); media_dir.mkdir(parents=True, exist_ok=True)
+    # Output paths
+    out_dir = Path(cfg.get("OUTPUT_DIR", "out"))
+    out_dir.mkdir(exist_ok=True)
+
+    media_dir = out_dir / cfg.get("OUTPUT_MEDIA_DIR", "media")
+    media_dir.mkdir(parents=True, exist_ok=True)
+
     out_tsv = out_dir / cfg.get("OUTPUT_TSV", "anki_notes.tsv")
     extra_path = Path(cfg.get("EXTRA_WORDS_FILE", "out/extra_words.txt"))
 
@@ -123,8 +158,8 @@ def main():
 
     # Config labels
     audio_ext = cfg.get("AUDIO_EXT", "mp3")
-    source_lang = cfg.get("SOURCE_LANG", "Bron")
-    target_lang = cfg.get("TARGET_LANG", "Doel")
+    source_lang = cfg.get("SOURCE_LANG", "Source")
+    target_lang = cfg.get("TARGET_LANG", "Target")
     source_code = (cfg.get("SOURCE_LANG_CODE", "") or "")
     target_code = (cfg.get("TARGET_LANG_CODE", "") or "")
     sleep_between = float(cfg.get("SLEEP_BETWEEN_CALLS", 0.03))
@@ -133,26 +168,26 @@ def main():
     oov_translate = bool(cfg.get("OOV_TRANSLATE", True))
     regenerate_audio = bool(cfg.get("REGENERATE_AUDIO_ALWAYS", False))
 
-    # Voorbeeld-audio snelheid (één bestand, snelheid ingebakken)
+    # Example audio speed
     example_rate = float(cfg.get("EXAMPLE_AUDIO_RATE", 1.0))
     if not (0.5 <= example_rate <= 2.0):
-        raise ValueError("EXAMPLE_AUDIO_RATE moet tussen 0.5 en 2.0 liggen (bijv. 0.85 of 1.25)")
+        raise ValueError("EXAMPLE_AUDIO_RATE must be between 0.5 and 2.0")
 
-    print(f"Backend: {backend_name} | Bron: {source_lang} → Doel: {target_lang}")
+    print(f"Backend: {backend_name} | Source: {source_lang} → Target: {target_lang}")
 
-    # TTS override (optioneel, standaard openai)
+    # Optional TTS override
     tts_override = (cfg.get("OVERRIDE_TTS_BACKEND", "openai") or "openai").lower()
     google_tts_client = None
     if tts_override in ("auto", "google"):
         if tts_override == "google" or (tts_override == "auto" and source_code.lower() == "id"):
             try:
                 from .backends.google_backend import GoogleBackend as GTT
+
                 google_tts_client = GTT(cfg)
             except Exception as e:
-                print("[WAARSCHUWING] Google TTS init mislukt, val terug op OpenAI:", e)
+                print("[WARNING] Google TTS init failed, falling back to OpenAI:", e)
                 google_tts_client = None
 
-    # Retry-wrappers
     @retry_deco
     def safe_generate(word: str) -> Dict[str, Any]:
         try:
@@ -181,26 +216,30 @@ def main():
             raise
 
     rows = []
+
     for w in tqdm(words):
         lw = w.strip().lower()
         if resume_enabled and lw in processed:
             continue
 
-        # 1) LLM data (met cache)
+        # 1) Generate card data
         data = None
         cache_key = make_cache_key(w, cfg, usage_notes, backend_name)
+
         if cache_enabled:
             cached = cache_read(cache_dir, cache_key)
             if cached and all(k in cached for k in ("translation", "example_src", "example_tgt", "note")):
                 data = cached
+
         if data is None:
             data = safe_generate(w)
             if cache_enabled:
                 cache_write(cache_dir, cache_key, data)
 
-        # 2) TTS: woord (normaal tempo; geen rate-aanpassing)
-        word_audio_name = f"{safe_filename(w)}.{audio_ext}"
+        # 2) Word audio: hash-based filename
+        word_audio_name = word_audio_filename(w, source_lang, audio_ext)
         word_audio_path = media_dir / word_audio_name
+
         if regenerate_audio or not word_audio_path.exists():
             try:
                 if google_tts_client is not None:
@@ -208,22 +247,24 @@ def main():
                 else:
                     safe_tts(w, word_audio_path)
             except Exception as e:
-                print(f"[TTS fout] woord '{w}': {e}")
+                print(f"[TTS error] word '{w}': {e}")
                 if google_tts_client is not None:
                     try:
                         safe_tts(w, word_audio_path)
                     except Exception as e2:
-                        print(f"[TTS fout] (OpenAI fallback) woord '{w}': {e2}")
+                        print(f"[TTS error] (OpenAI fallback) word '{w}': {e2}")
                         word_audio_name = ""
 
-        # 3) TTS: voorbeeld (één bestand, met instelbare snelheid)
+        # 3) Example audio: hash-based filename on sentence content
         example_src = data["example_src"]
         example_src_with_audio = example_src
+
         if add_example_audio and example_src.strip():
-            ex_audio_name = f"{safe_filename(w)}_ex.{audio_ext}"
+            ex_audio_name = example_audio_filename(example_src, source_lang, audio_ext)
             ex_audio_path = media_dir / ex_audio_name
-            # Normale synthese
+
             need_synthesize = regenerate_audio or not ex_audio_path.exists()
+
             if need_synthesize:
                 try:
                     if google_tts_client is not None:
@@ -231,14 +272,14 @@ def main():
                     else:
                         safe_tts(example_src, ex_audio_path)
                 except Exception as e:
-                    print(f"[TTS fout] voorbeeld '{w}': {e}")
+                    print(f"[TTS error] example '{w}': {e}")
                     if google_tts_client is not None:
                         try:
                             safe_tts(example_src, ex_audio_path)
                         except Exception as e2:
-                            print(f"[TTS fout] (OpenAI fallback) voorbeeld '{w}': {e2}")
+                            print(f"[TTS error] (OpenAI fallback) example '{w}': {e2}")
 
-            # Snelheid toepassen (overschrijft het originele bestand)
+            # Apply example audio speed in-place
             if ex_audio_path.exists() and abs(example_rate - 1.0) > 1e-6:
                 tmp_path = ex_audio_path.with_suffix(f".rate_tmp.{ex_audio_path.suffix[1:]}")
                 try:
@@ -246,7 +287,7 @@ def main():
                     ex_audio_path.unlink(missing_ok=True)
                     tmp_path.rename(ex_audio_path)
                 except Exception as e:
-                    print(f"[Audio-snelheid fout] voorbeeld '{w}': {e}")
+                    print(f"[Audio rate error] example '{w}': {e}")
 
             if ex_audio_path.exists():
                 example_src_with_audio = f"{example_src}<br>[sound:{ex_audio_name}]"
@@ -260,7 +301,7 @@ def main():
                 oov_local.append(tok)
                 extra_words_global.add(tok)
 
-        # 5) New words (met vertalingen)
+        # 5) New words field
         new_words_field = ""
         if show_new_on_back and oov_local:
             mapping: Dict[str, str] = {}
@@ -268,8 +309,9 @@ def main():
                 try:
                     mapping = safe_translate_oov(oov_local)
                 except Exception as e:
-                    logger.warning(f"OOV-vertaling overgeslagen: {e}")
+                    logger.warning(f"OOV translation skipped: {e}")
                     mapping = {}
+
             lines, done = [], set()
             for t in oov_local:
                 if t in done:
@@ -277,56 +319,60 @@ def main():
                 done.add(t)
                 tr = mapping.get(t, "")
                 lines.append(f"{t} = {tr}" if tr else t)
+
             new_words_field = "\n".join(lines)
 
-        # 6) Rij
-        front = (
-            f"{w}<br>[sound:{word_audio_name}]"
-            if (media_dir / word_audio_name).exists()
-            else w
-        )
-        rows.append([
-            front,
-            data["translation"],
-            example_src_with_audio,
-            data["example_tgt"],
-            data.get("note", ""),
-            new_words_field,
-        ])
+        # 6) Build row
+        front = f"{w}<br>[sound:{word_audio_name}]" if (media_dir / word_audio_name).exists() else w
 
-        # 7) Resume-state
+        rows.append(
+            [
+                front,
+                data["translation"],
+                example_src_with_audio,
+                data["example_tgt"],
+                data.get("note", ""),
+                new_words_field,
+            ]
+        )
+
+        # 7) Update resume state
         if resume_enabled:
             processed.add(lw)
             save_state(state_path, {"processed": sorted(list(processed))})
 
         time.sleep(sleep_between)
 
-    # 8) TSV
+    # 8) Write TSV
     with out_tsv.open("w", newline="", encoding="utf-8") as f:
         wri = csv.writer(f, delimiter="\t")
-        wri.writerow([
-            f"Front ({source_lang} + Audio)",
-            f"Back ({target_lang})",
-            f"Example ({source_lang})",
-            f"Example ({target_lang})",
-            "Note",
-            "New words",
-        ])
+        wri.writerow(
+            [
+                "Front",
+                "Back",
+                "Example Source",
+                "Example Target",
+                "Note",
+                "New Words",
+            ]
+        )
         wri.writerows(rows)
-    print("✅ TSV klaar:", out_tsv)
 
-    # 9) APKG
+    print("✅ TSV ready:", out_tsv)
+
+    # 9) Build APKG
     if cfg.get("CREATE_APKG", True):
+        print(f"Rows count: {len(rows)}")
         apkg = build_apkg(cfg, rows, media_dir)
-        print("📦 APKG gemaakt:", apkg)
+        print("📦 APKG created:", apkg)
 
-    # 10) Los OOV-bestand
+    # 10) Extra words file
     if extra_words_global:
         extra_path.parent.mkdir(parents=True, exist_ok=True)
         extra_path.write_text("\n".join(sorted(extra_words_global)) + "\n", encoding="utf-8")
-        print(f"📝 Extra woorden uit voorbeeldzinnen: {extra_path} ({len(extra_words_global)} items)")
+        print(f"📝 Extra words written: {extra_path} ({len(extra_words_global)} items)")
     else:
-        print("📝 Geen extra woorden gevonden in voorbeeldzinnen.")
+        print("📝 No extra words found.")
 
     print(f"📁 Media: {media_dir}")
     if resume_enabled:

@@ -10,4 +10,5 @@ words.txt
 new_words.txt
 out/
 cache/
+lib64/
 __pycache__/

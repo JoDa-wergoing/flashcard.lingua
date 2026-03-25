@@ -32,8 +32,8 @@ def build_apkg(cfg: Dict, rows: List[List[str]], media_dir: Path) -> Path:
     fields = [
         {"name": f"Front ({source_lang} + Audio)"},
         {"name": f"Back ({target_lang})"},
-        {"name": f"Example ({source_lang})"},
-        {"name": f"Example ({target_lang})"},
+        {"name": f"Example Source"},
+        {"name": f"Example Target"},
         {"name": "Note"},
         {"name": "New words"}
     ]
